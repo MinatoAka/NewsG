@@ -1,118 +1,195 @@
 function doGet(e) {
   const props = PropertiesService.getScriptProperties();
-  const ALLOWED_DOMAINS = (JSON.parse(props.getProperty("DOMAINS") || "[]") || [])
-    .map(domain => String(domain).toLowerCase().trim())
-    .filter(Boolean);
+
+  const ALLOWED_DOMAINS = parseStringArray(props.getProperty("DOMAINS"), ["example.com"]);
   const QUERY = props.getProperty("KUERY") || "berita keuangan indonesia";
-  const FETCH_COUNT = 50;
-  const TRUSTED_SOURCES = (JSON.parse(props.getProperty("TRUSTED_NEWS") || "[]") || [])
-    .map(source => String(source).toLowerCase().trim())
-    .filter(Boolean);
+  const TRUSTED_SOURCES = parseStringArray(props.getProperty("TRUSTED_NEWS"), []);
+  const FETCH_COUNT = 20;
   const CACHE_TTL_SECONDS = 300;
-  const CACHE_KEY = 'newsg:' + Utilities.base64EncodeWebSafe(QUERY + '|' + JSON.stringify(TRUSTED_SOURCES));
 
-  let clientDomain = '';
-  if (e && e.parameter && e.parameter.ref) {
-    clientDomain = String(e.parameter.ref).toLowerCase().trim();
-  }
+  const clientRef = e && e.parameter && e.parameter.ref ? String(e.parameter.ref).trim() : "";
+  const clientDomain = normalizeHost(clientRef);
 
-  const isAllowed = ALLOWED_DOMAINS.length > 0
-    ? ALLOWED_DOMAINS.some(domain => clientDomain.includes(domain))
-    : false;
-
-  if (!isAllowed) {
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
-      message: 'Access denied: Unauthorized origin.'
-    })).setMimeType(ContentService.MimeType.JSON);
+  if (!isAllowedOrigin(clientDomain, ALLOWED_DOMAINS)) {
+    return jsonResponse({
+      status: "error",
+      message: "Access denied: Unauthorized origin."
+    });
   }
 
   const cache = CacheService.getScriptCache();
-  const cachedResult = cache.get(CACHE_KEY);
-  if (cachedResult) {
-    return ContentService.createTextOutput(cachedResult).setMimeType(ContentService.MimeType.JSON);
-  }
+  const cacheKey = "newsg:" + Utilities.base64EncodeWebSafe(
+    JSON.stringify({
+      query: QUERY,
+      trusted: TRUSTED_SOURCES
+    })
+  );
 
-  function timeAgo(ds) {
-    try {
-      const d = new Date(ds);
-      if (isNaN(d.getTime())) return '';
-      const diff = (Date.now() - d.getTime()) / 1000;
-      if (diff < 60) return 'baru saja';
-      if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
-      if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
-      return Math.floor(diff / 86400) + ' hari lalu';
-    } catch (err) {
-      return '';
-    }
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
   }
-
-  function isTrusted(source) {
-    if (!source) return false;
-    const s = source.toLowerCase();
-    return TRUSTED_SOURCES.some(ts => s.includes(ts));
-  }
-
-  const googleRss = 'https://news.google.com/rss/search?q=' + encodeURIComponent(QUERY) + '&hl=id&gl=ID&ceid=ID:id';
 
   try {
-    const response = UrlFetchApp.fetch(googleRss, { muteHttpExceptions: true });
+    const rssUrl = "https://news.google.com/rss/search?q=" +
+      encodeURIComponent(QUERY) +
+      "&hl=id&gl=ID&ceid=ID:id";
+
+    const response = UrlFetchApp.fetch(rssUrl, {
+      muteHttpExceptions: true
+    });
 
     if (response.getResponseCode() !== 200) {
-      throw new Error('Google News menolak request (HTTP ' + response.getResponseCode() + '). Mungkin kena rate limit.');
+      throw new Error("Google News menolak request (HTTP " + response.getResponseCode() + ").");
     }
 
     const xmlText = response.getContentText();
-    const document = XmlService.parse(xmlText);
-    const root = document.getRootElement();
-    const channel = root.getChild('channel');
-
-    if (!channel) throw new Error('Struktur RSS tidak valid (channel tidak ditemukan).');
-
-    const items = channel.getChildren('item');
-    const processedItems = [];
-
-    for (let i = 0; i < items.length && processedItems.length < FETCH_COUNT; i++) {
-      const item = items[i];
-      let rawTitle = item.getChildText('title') || '';
-      const link = item.getChildText('link') || '';
-      const pubDate = item.getChildText('pubDate') || '';
-
-      const sourceElement = item.getChild('source');
-      let source = sourceElement ? sourceElement.getValue().trim() : '';
-
-      let title = rawTitle;
-      const idx = title.lastIndexOf(' - ');
-      if (idx > 10) {
-        if (!source) source = title.substring(idx + 3).trim();
-        title = title.substring(0, idx).trim();
-      }
-
-      if (!title || !link) continue;
-      if (TRUSTED_SOURCES.length && !isTrusted(source)) continue;
-
-      processedItems.push({
-        title: title,
-        link: link,
-        source: source || 'Google News',
-        time: timeAgo(pubDate)
-      });
-    }
+    const items = parseGoogleNewsRss(xmlText, TRUSTED_SOURCES, FETCH_COUNT);
 
     const result = JSON.stringify({
-      status: 'ok',
-      items: processedItems
+      status: "ok",
+      items: items
     });
 
-    cache.put(CACHE_KEY, result, CACHE_TTL_SECONDS);
+    cache.put(cacheKey, result, CACHE_TTL_SECONDS);
 
     return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    console.error('NewsG Error: ' + err.toString());
-
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
+    console.error("NewsG Error: " + err.toString());
+    return jsonResponse({
+      status: "error",
       message: err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    });
   }
+}
+
+function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
+  const document = XmlService.parse(xmlText);
+  const root = document.getRootElement();
+  const channel = root.getChild("channel");
+
+  if (!channel) {
+    throw new Error("Struktur RSS tidak valid (channel tidak ditemukan).");
+  }
+
+  const trustedSet = new Set(
+    trustedSources
+      .map(source => String(source).toLowerCase().trim())
+      .filter(Boolean)
+  );
+
+  const items = channel.getChildren("item");
+  const seenLinks = new Set();
+  const processed = [];
+
+  for (let i = 0; i < items.length && processed.length < maxItems; i++) {
+    const item = items[i];
+    const rawTitle = item.getChildText("title") || "";
+    const link = (item.getChildText("link") || "").trim();
+    const pubDate = item.getChildText("pubDate") || "";
+
+    if (!link || seenLinks.has(link)) continue;
+    seenLinks.add(link);
+
+    let title = rawTitle;
+    let source = item.getChild("source") ? (item.getChild("source").getValue() || "").trim() : "";
+
+    const idx = title.lastIndexOf(" - ");
+    if (idx > 10) {
+      if (!source) {
+        source = title.substring(idx + 3).trim();
+      }
+      title = title.substring(0, idx).trim();
+    }
+
+    if (!title) continue;
+    if (trustedSet.size > 0 && !isTrustedSource(source, trustedSet)) continue;
+
+    processed.push({
+      title: title,
+      link: link,
+      source: source || "Google News",
+      time: timeAgo(pubDate),
+      publishedAt: pubDate || ""
+    });
+  }
+
+  return processed;
+}
+
+function isAllowedOrigin(clientDomain, allowedDomains) {
+  if (!clientDomain) return false;
+  if (!allowedDomains || allowedDomains.length === 0) return false;
+
+  const normalizedAllowed = allowedDomains
+    .map(domain => normalizeHost(domain))
+    .filter(Boolean);
+
+  return normalizedAllowed.includes(clientDomain);
+}
+
+function isTrustedSource(source, trustedSet) {
+  if (!source) return false;
+  const normalized = String(source).toLowerCase().trim();
+  return trustedSet.has(normalized) || Array.from(trustedSet).some(item => normalized.includes(item));
+}
+
+function normalizeHost(value) {
+  if (!value) return "";
+
+  const input = String(value).trim().toLowerCase();
+
+  try {
+    let url = input;
+    if (!/^https?:\/\//i.test(url)) {
+      url = "https://" + url;
+    }
+
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "");
+  } catch (e) {
+    return input
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0]
+      .split("?")[0]
+      .trim();
+  }
+}
+
+function parseStringArray(value, fallback) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    if (!Array.isArray(parsed)) {
+      return Array.isArray(fallback) ? fallback : [];
+    }
+
+    return parsed
+      .map(item => String(item).toLowerCase().trim())
+      .filter(Boolean);
+  } catch (e) {
+    return Array.isArray(fallback) ? fallback : [];
+  }
+}
+
+function timeAgo(ds) {
+  try {
+    const d = new Date(ds);
+    if (isNaN(d.getTime())) return "";
+
+    const diff = (Date.now() - d.getTime()) / 1000;
+
+    if (diff < 60) return "baru saja";
+    if (diff < 3600) return Math.floor(diff / 60) + " menit lalu";
+    if (diff < 86400) return Math.floor(diff / 3600) + " jam lalu";
+    return Math.floor(diff / 86400) + " hari lalu";
+  } catch (err) {
+    return "";
+  }
+}
+
+function jsonResponse(payload) {
+  return ContentService
+    .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
 }
