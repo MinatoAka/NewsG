@@ -91,16 +91,8 @@ function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
     if (!link || seenLinks.has(link)) continue;
     seenLinks.add(link);
 
-    let title = rawTitle;
     let source = item.getChild("source") ? (item.getChild("source").getValue() || "").trim() : "";
-
-    const idx = title.lastIndexOf(" - ");
-    if (idx > 10) {
-      if (!source) {
-        source = title.substring(idx + 3).trim();
-      }
-      title = title.substring(0, idx).trim();
-    }
+    let title = cleanTitle(rawTitle, source);
 
     if (!title) continue;
     if (trustedSet.size > 0 && !isTrustedSource(source, trustedSet)) continue;
@@ -115,6 +107,29 @@ function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
   }
 
   return processed;
+}
+
+function cleanTitle(rawTitle, source) {
+  let title = String(rawTitle || "").trim();
+  const sourceName = String(source || "").trim();
+
+  if (sourceName) {
+    title = title.replace(
+      new RegExp("\\s*(?:-|–|\\|)\\s*" + escapeRegex(sourceName) + "$", "i"),
+      ""
+    ).trim();
+  }
+
+  const idx = title.lastIndexOf(" - ");
+  if (idx > 10) {
+    title = title.substring(0, idx).trim();
+  }
+
+  return title;
+}
+
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isAllowedOrigin(clientDomain, allowedDomains) {
