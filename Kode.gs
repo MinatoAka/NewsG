@@ -18,8 +18,7 @@ function doGet(e) {
   }
 
   const cache = CacheService.getScriptCache();
-  const cacheKey = "newsg:" + Utilities.base64EncodeWebSafe(
-    JSON.stringify({
+  const cacheKey = "newsg:" + hashString(JSON.stringify({
       query: QUERY,
       trusted: TRUSTED_SOURCES
     })
@@ -107,6 +106,17 @@ function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
   }
 
   return processed;
+}
+
+function hashString(value) {
+  try {
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value);
+    return digest.map(function(byte) {
+      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+    }).join('');
+  } catch (err) {
+    return Utilities.base64EncodeWebSafe(value).replace(/=+$/g, '').substring(0, 200);
+  }
 }
 
 function cleanTitle(rawTitle, source) {
