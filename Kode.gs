@@ -33,7 +33,6 @@ function doGet(e) {
     return ContentService.createTextOutput(cachedResult).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Fungsi timeAgo ditaruh di sini biar rapi
   function timeAgo(ds) {
     try {
       const d = new Date(ds);
@@ -96,7 +95,7 @@ function doGet(e) {
         title: title,
         link: link,
         source: source || 'Google News',
-        time: timeAgo(pubDate) // <-- INI DIPERBAIKI (Panggil fungsinya, bukan IIFE)
+        time: timeAgo(pubDate)
       });
     }
 
