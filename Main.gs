@@ -1,6 +1,5 @@
 function doGet(e) {
   const props = PropertiesService.getScriptProperties();
-
   const ALLOWED_DOMAINS = parseStringArray(props.getProperty("DOMAINS"), []);
   const QUERY = props.getProperty("KUERY") || "berita keuangan indonesia";
   const TRUSTED_SOURCES = parseStringArray(props.getProperty("TRUSTED_NEWS"), []);
@@ -60,4 +59,15 @@ function doGet(e) {
       message: err.toString()
     });
   }
+}
+
+function isAllowedOrigin(clientDomain, allowedDomains) {
+  if (!clientDomain) return false;
+  if (!allowedDomains || allowedDomains.length === 0) return false;
+
+  const normalizedAllowed = allowedDomains
+    .map(domain => normalizeHost(domain))
+    .filter(Boolean);
+
+  return normalizedAllowed.includes(clientDomain);
 }
