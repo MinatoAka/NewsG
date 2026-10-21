@@ -1,7 +1,7 @@
 function doGet(e) {
   const props = PropertiesService.getScriptProperties();
 
-  const ALLOWED_DOMAINS = parseStringArray(props.getProperty("DOMAINS"), ["example.com"]);
+  const ALLOWED_DOMAINS = parseStringArray(props.getProperty("DOMAINS"), []);
   const QUERY = props.getProperty("KUERY") || "berita keuangan indonesia";
   const TRUSTED_SOURCES = parseStringArray(props.getProperty("TRUSTED_NEWS"), []);
   const FETCH_COUNT = 20;
