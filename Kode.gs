@@ -33,12 +33,7 @@ function doGet(e) {
     return ContentService.createTextOutput(cachedResult).setMimeType(ContentService.MimeType.JSON);
   }
 
-  function isTrusted(source) {
-    if (!source) return false;
-    const s = source.toLowerCase();
-    return TRUSTED_SOURCES.some(ts => s.includes(ts));
-  }
-
+  // Fungsi timeAgo ditaruh di sini biar rapi
   function timeAgo(ds) {
     try {
       const d = new Date(ds);
@@ -51,6 +46,12 @@ function doGet(e) {
     } catch (err) {
       return '';
     }
+  }
+
+  function isTrusted(source) {
+    if (!source) return false;
+    const s = source.toLowerCase();
+    return TRUSTED_SOURCES.some(ts => s.includes(ts));
   }
 
   const googleRss = 'https://news.google.com/rss/search?q=' + encodeURIComponent(QUERY) + '&hl=id&gl=ID&ceid=ID:id';
@@ -71,7 +72,6 @@ function doGet(e) {
 
     const items = channel.getChildren('item');
     const processedItems = [];
-    const now = Date.now();
 
     for (let i = 0; i < items.length && processedItems.length < FETCH_COUNT; i++) {
       const item = items[i];
@@ -90,26 +90,13 @@ function doGet(e) {
       }
 
       if (!title || !link) continue;
-
       if (TRUSTED_SOURCES.length && !isTrusted(source)) continue;
 
       processedItems.push({
         title: title,
         link: link,
         source: source || 'Google News',
-        time: (() => {
-          try {
-            const d = new Date(pubDate);
-            if (isNaN(d.getTime())) return '';
-            const diff = (now - d.getTime()) / 1000;
-            if (diff < 60) return 'baru saja';
-            if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
-            if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
-            return Math.floor(diff / 86400) + ' hari lalu';
-          } catch (err) {
-            return '';
-          }
-        })()
+        time: timeAgo(pubDate) // <-- INI DIPERBAIKI (Panggil fungsinya, bukan IIFE)
       });
     }
 
