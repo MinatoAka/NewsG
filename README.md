@@ -1,5 +1,5 @@
 # NewsG by Atur Dompet
-Kurasi otomatis dari news google with GAS.
+Kurasi otomatis dari news google with Google Apps Script (GAS).
 
 ## Script property
 - DOMAINS : ["aturdompet.my.id","www.aturdompet.my.id"]
