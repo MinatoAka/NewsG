@@ -4,8 +4,8 @@ function doGet(e) {
   const QUERY = props.getProperty("KUERY") || "berita keuangan indonesia";
   const TRUSTED_SOURCES = parseStringArray(props.getProperty("TRUSTED_NEWS"), []);
   const FETCH_COUNT = 20;
-  const CACHE_TTL_SECONDS = 600;
-  const INFLIGHT_TTL_SECONDS = 30;
+  const CACHE_TTL_SECONDS = 1800;
+  const INFLIGHT_TTL_SECONDS = 60;
 
   const clientRef = e && e.parameter && e.parameter.ref ? String(e.parameter.ref).trim() : "";
   const clientDomain = normalizeHost(clientRef);
