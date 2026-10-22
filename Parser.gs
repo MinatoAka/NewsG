@@ -2,9 +2,24 @@ function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeTrustedSources(sources) {
+  const normalized = new Set();
+
+  if (!Array.isArray(sources)) return normalized;
+
+  for (let i = 0; i < sources.length; i++) {
+    const value = String(sources[i]).toLowerCase().trim();
+    if (value) normalized.add(value);
+  }
+
+  return normalized;
+}
+
 function cleanTitle(rawTitle, source) {
   let title = String(rawTitle || "").trim();
   const sourceName = String(source || "").trim();
+
+  if (!title) return title;
 
   if (sourceName) {
     title = title.replace(
@@ -22,9 +37,17 @@ function cleanTitle(rawTitle, source) {
 }
 
 function isTrustedSource(source, trustedSet) {
-  if (!source) return false;
+  if (!source || !trustedSet || trustedSet.size === 0) return false;
+
   const normalized = String(source).toLowerCase().trim();
-  return trustedSet.has(normalized) || Array.from(trustedSet).some(item => normalized.includes(item));
+
+  for (const item of trustedSet) {
+    if (normalized === item || normalized.includes(item)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
@@ -36,11 +59,9 @@ function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
     throw new Error("Struktur RSS tidak valid (channel tidak ditemukan).");
   }
 
-  const trustedSet = new Set(
-    trustedSources
-      .map(source => String(source).toLowerCase().trim())
-      .filter(Boolean)
-  );
+  const trustedSet = trustedSources instanceof Set
+    ? trustedSources
+    : normalizeTrustedSources(Array.isArray(trustedSources) ? trustedSources : []);
 
   const items = channel.getChildren("item");
   const seenLinks = new Set();
@@ -55,8 +76,9 @@ function parseGoogleNewsRss(xmlText, trustedSources, maxItems) {
     if (!link || seenLinks.has(link)) continue;
     seenLinks.add(link);
 
-    let source = item.getChild("source") ? (item.getChild("source").getValue() || "").trim() : "";
-    let title = cleanTitle(rawTitle, source);
+    const sourceNode = item.getChild("source");
+    const source = sourceNode ? (sourceNode.getValue() || "").trim() : "";
+    const title = cleanTitle(rawTitle, source);
 
     if (!title) continue;
     if (trustedSet.size > 0 && !isTrustedSource(source, trustedSet)) continue;
