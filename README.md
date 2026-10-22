@@ -5,10 +5,17 @@
 [![JavaScript](https://img.shields.io/badge/Language-JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Google Apps Script](https://img.shields.io/badge/Platform-Google%20Apps%20Script-34A853?logo=google&logoColor=white)](https://developers.google.com/apps-script)
 [![Last Commit](https://img.shields.io/github/last-commit/MinatoAka/NewsG)](https://github.com/MinatoAka/NewsG/commits/main)
+[![Support Me on Saweria](https://img.shields.io/badge/Support%20Me-Saweria-ff6600?logo=buy-me-a-coffee&logoColor=white)](https://saweria.co/AKaAturDompet)
 
 Kurasi otomatis berita dari Google News dengan Google Apps Script (GAS) untuk kebutuhan website atau aplikasi yang ingin menampilkan konten berita yang relevan, cepat, dan terfilter.
 
 NewsG dirancang khusus untuk kebutuhan Atur Dompet, namun dapat digunakan ulang untuk berbagai kebutuhan lainnya yang membutuhkan feed berita bersumber dari Google News.
+
+## Dukungan
+
+Mendukung pengembangan project ini melalui Saweria:
+
+[![Saweria](https://img.shields.io/badge/Saweria-AKaAturDompet-ff6600?logo=buy-me-a-coffee&logoColor=white)](https://saweria.co/AKaAturDompet)
 
 ## Fitur
 
