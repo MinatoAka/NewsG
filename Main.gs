@@ -5,6 +5,7 @@ function doGet(e) {
   const TRUSTED_SOURCES = parseStringArray(props.getProperty("TRUSTED_NEWS"), []);
   const FETCH_COUNT = 20;
   const CACHE_TTL_SECONDS = 300;
+  const INFLIGHT_TTL_SECONDS = 15;
 
   const clientRef = e && e.parameter && e.parameter.ref ? String(e.parameter.ref).trim() : "";
   const clientDomain = normalizeHost(clientRef);
@@ -16,19 +17,30 @@ function doGet(e) {
     });
   }
 
+  const normalizedTrustedSources = normalizeTrustedSources(TRUSTED_SOURCES);
+
   const cache = CacheService.getScriptCache();
-  const cacheKey = "newsg:" + hashString(JSON.stringify({
-      query: QUERY,
-      trusted: TRUSTED_SOURCES
-    })
-  );
+  const cacheKey = "newsg:" + hashString([
+    QUERY,
+    Array.from(normalizedTrustedSources).sort().join(",")
+  ].join("|"));
 
   const cached = cache.get(cacheKey);
   if (cached) {
     return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
   }
 
+  const inflightKey = cacheKey + ":inflight";
+  if (cache.get(inflightKey) === "1") {
+    const fallback = cache.get(cacheKey);
+    if (fallback) {
+      return ContentService.createTextOutput(fallback).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   try {
+    cache.put(inflightKey, "1", INFLIGHT_TTL_SECONDS);
+
     const rssUrl = "https://news.google.com/rss/search?q=" +
       encodeURIComponent(QUERY) +
       "&hl=id&gl=ID&ceid=ID:id";
@@ -42,7 +54,7 @@ function doGet(e) {
     }
 
     const xmlText = response.getContentText();
-    const items = parseGoogleNewsRss(xmlText, TRUSTED_SOURCES, FETCH_COUNT);
+    const items = parseGoogleNewsRss(xmlText, normalizedTrustedSources, FETCH_COUNT);
 
     const result = JSON.stringify({
       status: "ok",
@@ -50,9 +62,11 @@ function doGet(e) {
     });
 
     cache.put(cacheKey, result, CACHE_TTL_SECONDS);
+    cache.remove(inflightKey);
 
     return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
+    cache.remove(inflightKey);
     console.error("NewsG Error: " + err.toString());
     return jsonResponse({
       status: "error",
