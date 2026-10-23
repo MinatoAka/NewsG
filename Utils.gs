@@ -32,6 +32,16 @@ function normalizeHost(value) {
   }
 }
 
+function normalizeTrustedSources(sources) {
+  if (!Array.isArray(sources)) return new Set();
+
+  const cleaned = sources
+    .map(s => String(s || '').toLowerCase().trim())
+    .filter(Boolean);
+
+  return new Set(cleaned);
+}
+
 function timeAgo(ds) {
   try {
     const d = new Date(ds);
