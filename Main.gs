@@ -36,6 +36,10 @@ function doGet(e) {
     if (fallback) {
       return ContentService.createTextOutput(fallback).setMimeType(ContentService.MimeType.JSON);
     }
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "loading",
+      message: "Sedang mengambil berita, silakan coba beberapa saat lagi."
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 
   try {
