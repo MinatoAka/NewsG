@@ -53,7 +53,7 @@ function doGet(e) {
       method: 'get',
       headers: {
         'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/W.X.Y.Z Safari/537.36',
-        'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+        'Accept': 'application/json, application/rss+xml, application/xml, text/xml, */*'
       },
       muteHttpExceptions: true
     };
