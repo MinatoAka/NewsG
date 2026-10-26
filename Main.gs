@@ -54,8 +54,8 @@ function doGet(e) {
       headers: {
         'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, application/rss+xml, application/xml, text/xml, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br'
+        'Accept-Language': 'en-US, en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate'
       },
       muteHttpExceptions: true
     };
