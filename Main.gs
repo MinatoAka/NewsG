@@ -45,9 +45,16 @@ function doGet(e) {
       encodeURIComponent(QUERY) +
       "&hl=id&gl=ID&ceid=ID:id";
 
-    const response = UrlFetchApp.fetch(rssUrl, {
+    const options = {
+      method: 'get',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*' 
+      },
       muteHttpExceptions: true
-    });
+    };
+    
+    const response = UrlFetchApp.fetch(rssUrl, options);
 
     if (response.getResponseCode() !== 200) {
       throw new Error("Google News menolak request (HTTP " + response.getResponseCode() + ").");
