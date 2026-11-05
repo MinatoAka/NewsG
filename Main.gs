@@ -49,17 +49,16 @@ function doGet(e) {
       encodeURIComponent(QUERY) +
       "&hl=id&gl=ID&ceid=ID:id";
 
-    const options = {
+    const optHeaders = {
       method: 'get',
+      muteHttpExceptions: true,
+      followRedirects: true,
       headers: {
-        'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, application/rss+xml, application/xml, text/xml, */*',
-        'Accept-Language': 'en-US, en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate'
-      },
-      muteHttpExceptions: true
+        'Accept': 'application/json, text/plain, text/xml, */*',
+        'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+      }
     };
-    
     const response = UrlFetchApp.fetch(rssUrl, options);
 
     if (response.getResponseCode() !== 200) {
