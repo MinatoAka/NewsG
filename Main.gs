@@ -59,7 +59,7 @@ function doGet(e) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
       }
     };
-    const response = UrlFetchApp.fetch(rssUrl, options);
+    const response = UrlFetchApp.fetch(rssUrl, optHeaders);
 
     if (response.getResponseCode() !== 200) {
       throw new Error("Google News menolak request (HTTP " + response.getResponseCode() + ").");
